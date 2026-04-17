@@ -5,13 +5,16 @@ import { SectionCard } from "@/components/section-card";
 import { SectionHeader } from "@/components/section-header";
 import { TopicCard } from "@/components/topic-card";
 import { WaveCard } from "@/components/wave-card";
+import { queueStatusLabels } from "@/lib/sample-data";
 import type { DashboardData } from "@/lib/types";
 
 export function DashboardGrid({ dashboard }: { dashboard: DashboardData }) {
-  const queueCounts = dashboard.queueColumns.map((column) => ({
-    label: column.label,
-    count: column.documents.length,
-  }));
+  const queueCounts = dashboard.queueColumns
+    .map((column) => ({
+      label: queueStatusLabels[column.label],
+      count: column.documents.length,
+    }))
+    .filter((item) => item.label !== queueStatusLabels.archived);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -20,10 +23,10 @@ export function DashboardGrid({ dashboard }: { dashboard: DashboardData }) {
           <SectionHeader
             eyebrow="Emerging Radar"
             title="새로 떠오르는 구조"
-            description="익숙하지 않지만 반복해서 보이는 개념을 빠르게 포착합니다."
+            description="반복적으로 보이기 시작한 개념만 먼저 올려 두고, 이후 evidence와 Wave로 연결합니다."
           />
           <div className="grid gap-4 xl:grid-cols-2">
-            {dashboard.topics.map((topic) => (
+            {dashboard.topics.slice(0, 6).map((topic) => (
               <TopicCard key={topic.id} topic={topic} />
             ))}
           </div>
@@ -33,7 +36,7 @@ export function DashboardGrid({ dashboard }: { dashboard: DashboardData }) {
           <SectionHeader
             eyebrow="Active Waves"
             title="활성 Wave"
-            description="각 wave가 어느 stage에 있는지, 어디서 value capture가 발생할지 관리합니다."
+            description="지금 어떤 구조가 어느 단계에 있고, 병목과 가치 포착이 어디서 생기는지 빠르게 봅니다."
           />
           <div className="grid gap-4">
             {dashboard.waves.map((wave) => (
@@ -60,7 +63,7 @@ export function DashboardGrid({ dashboard }: { dashboard: DashboardData }) {
             href="/queue"
             className="mt-4 inline-flex rounded-full border border-border px-4 py-2 text-sm text-muted-foreground"
           >
-            큐 전체 보기
+            전체 큐 보기
           </Link>
         </SectionCard>
 

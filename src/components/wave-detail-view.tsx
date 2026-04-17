@@ -30,6 +30,7 @@ export function WaveDetailView({ slug }: { slug: string }) {
   const relatedCompanies = dashboard.companies.filter((company) => wave.companyIds.includes(company.id));
   const relatedEvidence = dashboard.evidenceItems.filter((item) => wave.evidenceIds.includes(item.id));
   const relatedQuestions = dashboard.questions.filter((question) => question.waveId === wave.id);
+  const relatedDocuments = dashboard.documents.filter((document) => document.waveId === wave.id);
 
   return (
     <div className="space-y-8">
@@ -63,7 +64,7 @@ export function WaveDetailView({ slug }: { slug: string }) {
           <SectionCard title="핵심 병목">
             <ul className="space-y-3 text-sm text-muted-foreground">
               {wave.keyBottlenecks.map((item) => (
-                <li key={item}>• {item}</li>
+                <li key={item}>- {item}</li>
               ))}
             </ul>
           </SectionCard>
@@ -81,6 +82,26 @@ export function WaveDetailView({ slug }: { slug: string }) {
             </div>
           </SectionCard>
 
+          <SectionCard title="관련 문서">
+            <div className="space-y-3">
+              {relatedDocuments.length ? (
+                relatedDocuments.map((document) => (
+                  <div key={document.id} className="rounded-2xl border border-border bg-white p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-foreground">{document.title}</p>
+                      <span className="text-xs text-muted-foreground">{document.source}</span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{document.summaryLine}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  아직 이 Wave에 직접 연결된 문서가 없습니다.
+                </p>
+              )}
+            </div>
+          </SectionCard>
+
           <SectionCard title="Evidence Board">
             <div className="space-y-4">
               {relatedEvidence.map((item) => (
@@ -89,7 +110,7 @@ export function WaveDetailView({ slug }: { slug: string }) {
             </div>
           </SectionCard>
 
-          <SectionCard title="나의 최신 해석">
+          <SectionCard title="현재의 최신 해석">
             <p className="text-sm leading-7 text-muted-foreground">{wave.latestInterpretation}</p>
           </SectionCard>
         </div>
@@ -111,7 +132,7 @@ export function WaveDetailView({ slug }: { slug: string }) {
                       size="sm"
                       onClick={() => detachTopicFromWave(topic.id)}
                     >
-                      이 topic 제거
+                      Topic 분리
                     </Button>
                   </div>
                 </div>

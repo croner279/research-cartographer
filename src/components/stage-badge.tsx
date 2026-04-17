@@ -9,17 +9,13 @@ const styles: Record<WaveStage, string> = {
 };
 
 const labels: Record<WaveStage, string> = {
-  early: "early",
-  accelerating: "accelerating",
-  crowded: "crowded",
-  uncertain: "uncertain",
-  restructuring: "restructuring",
+  early: "초기",
+  accelerating: "가속",
+  crowded: "과열",
+  uncertain: "불확실",
+  restructuring: "재편",
 };
 
 export function StageBadge({ value }: { value: WaveStage }) {
-  return (
-    <span className={`rounded-full px-3 py-1 text-xs font-medium ${styles[value]}`}>
-      {labels[value]}
-    </span>
-  );
+  return <span className={`rounded-full px-3 py-1 text-xs font-medium ${styles[value]}`}>{labels[value]}</span>;
 }

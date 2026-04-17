@@ -39,7 +39,7 @@ export function QuestionsView() {
       <SectionHeader
         eyebrow="Question Board"
         title="열린 질문"
-        description="높은 수준의 research question을 evidence 기반으로 업데이트합니다."
+        description="아직 답이 명확하지 않은 리서치 질문을 evidence 기반으로 계속 업데이트합니다."
       />
       <SearchFilterBar
         query={query}

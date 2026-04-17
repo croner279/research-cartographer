@@ -19,20 +19,20 @@ export function QuestionEditForm({ question }: { question: Question }) {
     <div className="rounded-2xl border border-border bg-white p-4">
       <p className="text-sm font-medium text-foreground">질문 편집</p>
       <div className="mt-3 space-y-3">
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="질문 제목" />
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="질문 제목" />
         <Textarea
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(event) => setDescription(event.target.value)}
           placeholder="질문 설명"
           className="min-h-20"
         />
         <div className="grid gap-3 xl:grid-cols-[1fr_140px]">
           <select
             value={waveId}
-            onChange={(e) => setWaveId(e.target.value)}
+            onChange={(event) => setWaveId(event.target.value)}
             className="h-10 rounded-xl border border-border bg-white px-3 text-sm outline-none"
           >
-            <option value="">연결 wave 미정</option>
+            <option value="">관련 Wave 선택</option>
             {dashboard.waves.map((wave) => (
               <option key={wave.id} value={wave.id}>
                 {wave.title}
@@ -44,7 +44,7 @@ export function QuestionEditForm({ question }: { question: Question }) {
             min={0}
             max={100}
             value={confidence}
-            onChange={(e) => setConfidence(e.target.value)}
+            onChange={(event) => setConfidence(event.target.value)}
             placeholder="신뢰도"
           />
         </div>

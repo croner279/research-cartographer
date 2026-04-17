@@ -53,7 +53,7 @@ export function QuestionCard({
                 <p className="text-sm font-medium text-foreground">Supporting evidence</p>
                 <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                   {question.supportingEvidence.map((item) => (
-                    <li key={item}>• {item}</li>
+                    <li key={item}>- {item}</li>
                   ))}
                 </ul>
               </div>
@@ -61,7 +61,7 @@ export function QuestionCard({
                 <p className="text-sm font-medium text-foreground">Opposing evidence</p>
                 <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                   {question.opposingEvidence.map((item) => (
-                    <li key={item}>• {item}</li>
+                    <li key={item}>- {item}</li>
                   ))}
                 </ul>
               </div>

@@ -12,7 +12,7 @@ export function MissedWinnersView() {
       <SectionHeader
         eyebrow="Missed Winners Lab"
         title="놓친 승자 복기"
-        description="비난이 아니라 학습용 워크벤치. 초기 단서, 놓친 이유, 다음 체크포인트를 정리합니다."
+        description="비관이 아니라 학습용 트랙레코드. 초기 단서, 놓친 이유, 다음 체크포인트를 정리합니다."
       />
       <div className="grid gap-5 xl:grid-cols-2">
         {dashboard.missedReviews.map((review) => (

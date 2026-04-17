@@ -26,7 +26,6 @@ Research Cartographer is a local-first MVP for detecting and mapping emerging in
 - `/evidence` Evidence Workspace
 - `/questions` Question Board
 - `/missed-winners` Missed Winners Lab
-- `/auth` Auth
 
 ## Setup
 

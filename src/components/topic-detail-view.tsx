@@ -11,12 +11,19 @@ import { TopicEditForm } from "@/components/topic-edit-form";
 import { TopicEvidenceLinker } from "@/components/topic-evidence-linker";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/components/workspace-provider";
-import type { TopicMaturity } from "@/lib/types";
+import type { TopicMaturity, TopicReviewStatus } from "@/lib/types";
 
 const topicStatuses: TopicMaturity[] = ["unknown", "interesting", "emerging", "promoted"];
+const reviewStatuses: TopicReviewStatus[] = ["draft", "active", "dismissed"];
 
 export function TopicDetailView({ slug }: { slug: string }) {
-  const { dashboard, setTopicStatus, promoteTopicToWave, detachTopicFromWave } = useWorkspace();
+  const {
+    dashboard,
+    setTopicStatus,
+    setTopicReviewStatus,
+    promoteTopicToWave,
+    detachTopicFromWave,
+  } = useWorkspace();
   const topic = dashboard.topics.find((item) => item.slug === slug);
 
   if (!topic) {
@@ -29,23 +36,37 @@ export function TopicDetailView({ slug }: { slug: string }) {
   const relatedQuestions = dashboard.questions.filter((question) =>
     topic.questionIds.includes(question.id),
   );
+  const relatedDocuments = dashboard.documents.filter(
+    (document) => document.topicId === topic.id || topic.evidenceIds.some((evidenceId) =>
+      dashboard.evidenceItems.find((item) => item.id === evidenceId)?.documentId === document.id,
+    ),
+  );
 
   return (
     <div className="space-y-8">
       <SectionHeader
         eyebrow="Topic Draft"
         title={topic.name}
-        description="새로 발견된 구조의 초안 맵. 왜 보이기 시작했는지, 어디에 연결되는지, 무엇을 더 확인해야 하는지를 빠르게 정리합니다."
+        description="반복된 개념이 왜 지금 잡히는지, 어떤 evidence가 붙는지, 어떤 Wave로 이어질 수 있는지 검토합니다."
         actions={
           <div className="flex items-center gap-3">
             <select
               value={topic.maturityStatus}
-              onChange={(event) =>
-                setTopicStatus(topic.id, event.target.value as TopicMaturity)
-              }
+              onChange={(event) => setTopicStatus(topic.id, event.target.value as TopicMaturity)}
               className="h-10 rounded-full border border-border bg-white px-4 text-sm outline-none"
             >
               {topicStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+            <select
+              value={topic.reviewStatus}
+              onChange={(event) => setTopicReviewStatus(topic.id, event.target.value as TopicReviewStatus)}
+              className="h-10 rounded-full border border-border bg-white px-4 text-sm outline-none"
+            >
+              {reviewStatuses.map((status) => (
                 <option key={status} value={status}>
                   {status}
                 </option>
@@ -66,12 +87,15 @@ export function TopicDetailView({ slug }: { slug: string }) {
           <SectionCard>
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-3">
-                <StatusBadge kind="topic" value={topic.maturityStatus} />
+                <div className="flex flex-wrap gap-2">
+                  <StatusBadge kind="topic" value={topic.maturityStatus} />
+                  <StatusBadge kind="review" value={topic.reviewStatus} />
+                </div>
                 <h2 className="text-2xl font-semibold text-foreground">{topic.oneLiner}</h2>
                 <p className="text-sm leading-7 text-muted-foreground">{topic.whyItMatters}</p>
               </div>
               <div className="grid gap-2">
-                <MetricPill label="최근 언급" value={`${topic.recentMentions}회`} />
+                <MetricPill label="반복 언급" value={`${topic.recentMentions}회`} />
                 <MetricPill label="연결 문서" value={`${topic.linkedDocumentsCount}개`} />
               </div>
             </div>
@@ -81,9 +105,41 @@ export function TopicDetailView({ slug }: { slug: string }) {
             <p className="text-sm leading-7 text-muted-foreground">{topic.whyNow}</p>
           </SectionCard>
 
+          <SectionCard title="열린 질문">
+            <div className="space-y-2">
+              {topic.openQuestions.length ? (
+                topic.openQuestions.map((question) => (
+                  <div key={question} className="rounded-2xl border border-border bg-white px-4 py-3 text-sm text-muted-foreground">
+                    {question}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">아직 열린 질문이 없습니다.</p>
+              )}
+            </div>
+          </SectionCard>
+
           <TopicEditForm topic={topic} />
 
-          <SectionCard title="관련 증거">
+          <SectionCard title="관련 문서">
+            <div className="space-y-3">
+              {relatedDocuments.length ? (
+                relatedDocuments.map((document) => (
+                  <div key={document.id} className="rounded-2xl border border-border bg-white p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-foreground">{document.title}</p>
+                      <span className="text-xs text-muted-foreground">{document.source}</span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{document.summaryLine}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">아직 이 topic에 연결된 문서가 없습니다.</p>
+              )}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="관련 evidence">
             <div className="space-y-4">
               <TopicEvidenceLinker topicId={topic.id} linkedEvidenceIds={topic.evidenceIds} />
               {evidenceItems.map((item) => (
@@ -101,35 +157,44 @@ export function TopicDetailView({ slug }: { slug: string }) {
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">{relatedWave.thesis}</p>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                아직 연결된 wave가 없습니다. 구조가 더 선명해지면 승격하거나 다시 연결하세요.
-              </p>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>아직 연결된 Wave는 없습니다.</p>
+                <p>엔진 힌트: {topic.parentWaveHint || "미지정"}</p>
+              </div>
             )}
           </SectionCard>
 
           <SectionCard title="관련 기업">
             <div className="flex flex-wrap gap-2">
-              {relatedCompanies.map((company) => (
-                <span
-                  key={company.id}
-                  className="rounded-full border border-border bg-white px-3 py-1 text-sm text-muted-foreground"
-                >
-                  {company.name}
-                </span>
-              ))}
+              {relatedCompanies.length ? (
+                relatedCompanies.map((company) => (
+                  <span
+                    key={company.id}
+                    className="rounded-full border border-border bg-white px-3 py-1 text-sm text-muted-foreground"
+                  >
+                    {company.name}
+                  </span>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">아직 연결된 기업이 없습니다.</p>
+              )}
             </div>
           </SectionCard>
 
-          <SectionCard title="열린 질문">
+          <SectionCard title="연결된 질문">
             <div className="space-y-3">
-              {relatedQuestions.map((question) => (
-                <div key={question.id} className="rounded-2xl border border-border bg-white p-4">
-                  <p className="text-sm font-medium text-foreground">{question.title}</p>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                    {question.description}
-                  </p>
-                </div>
-              ))}
+              {relatedQuestions.length ? (
+                relatedQuestions.map((question) => (
+                  <div key={question.id} className="rounded-2xl border border-border bg-white p-4">
+                    <p className="text-sm font-medium text-foreground">{question.title}</p>
+                    <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                      {question.description}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">아직 연결된 질문이 없습니다.</p>
+              )}
             </div>
           </SectionCard>
         </div>

@@ -1,4 +1,6 @@
 export type TopicMaturity = "unknown" | "interesting" | "emerging" | "promoted";
+export type TopicOrigin = "manual" | "analysis";
+export type TopicReviewStatus = "draft" | "active" | "dismissed";
 export type WaveStage = "early" | "accelerating" | "crowded" | "uncertain" | "restructuring";
 export type DocumentStatus =
   | "inbox"
@@ -7,6 +9,8 @@ export type DocumentStatus =
   | "extracted"
   | "linked"
   | "archived";
+export type DocumentIntakeMethod = "paste" | "file_stub";
+export type DocumentAnalysisState = "not_run" | "running" | "completed" | "failed";
 export type EvidenceWhyTag =
   | "bottleneck"
   | "new demand"
@@ -14,6 +18,8 @@ export type EvidenceWhyTag =
   | "overlooked detail"
   | "tone change"
   | "structure hint";
+export type EvidenceReviewStatus = "pending" | "approved" | "rejected";
+export type AnalysisRunStatus = "running" | "completed" | "failed";
 
 export type Company = {
   id: string;
@@ -31,6 +37,24 @@ export type Document = {
   publishedAt: string;
   summaryLine: string;
   rawText: string;
+  topicId: string;
+  waveId: string;
+  fileName?: string;
+  intakeMethod: DocumentIntakeMethod;
+  analysisState: DocumentAnalysisState;
+  lastAnalysisRunId: string;
+  createdAt: string;
+};
+
+export type DocumentChunk = {
+  id: string;
+  documentId: string;
+  analysisRunId: string;
+  order: number;
+  text: string;
+  charStart: number;
+  charEnd: number;
+  tokenEstimate: number;
 };
 
 export type EmergingTopic = {
@@ -42,11 +66,18 @@ export type EmergingTopic = {
   whyItMatters: string;
   parentWaveId: string;
   maturityStatus: TopicMaturity;
+  reviewStatus: TopicReviewStatus;
+  origin: TopicOrigin;
   recentMentions: number;
   linkedDocumentsCount: number;
   evidenceIds: string[];
   companyIds: string[];
   questionIds: string[];
+  openQuestions: string[];
+  sourceConcepts: string[];
+  parentWaveHint: string;
+  lastAnalysisRunId: string;
+  createdAt: string;
 };
 
 export type Wave = {
@@ -60,6 +91,7 @@ export type Wave = {
   latestInterpretation: string;
   companyIds: string[];
   evidenceIds: string[];
+  priority?: number;
 };
 
 export type Question = {
@@ -80,11 +112,33 @@ export type Question = {
 export type EvidenceItem = {
   id: string;
   documentId: string;
+  chunkId: string;
+  analysisRunId: string;
   title: string;
   snippet: string;
   itemType: "snippet" | "note" | "image_placeholder";
   whyTag: EvidenceWhyTag;
   note?: string;
+  reviewStatus: EvidenceReviewStatus;
+  confidence: number;
+  companyMentions: string[];
+  candidateTopicNames: string[];
+  parentWaveHint: string;
+  createdAt: string;
+  approvedAt?: string;
+};
+
+export type AnalysisRun = {
+  id: string;
+  documentId: string;
+  createdAt: string;
+  status: AnalysisRunStatus;
+  engineVersion: string;
+  chunkCount: number;
+  evidenceCandidateCount: number;
+  topicDraftCount: number;
+  repeatedConcepts: string[];
+  notes: string;
 };
 
 export type MissedReview = {
@@ -97,17 +151,19 @@ export type MissedReview = {
 };
 
 export type QueueColumn = {
-  label: string;
+  label: DocumentStatus;
   documents: Document[];
 };
 
 export type DashboardData = {
   companies: Company[];
   documents: Document[];
+  documentChunks: DocumentChunk[];
   topics: EmergingTopic[];
   waves: Wave[];
   questions: Question[];
   evidenceItems: EvidenceItem[];
+  analysisRuns: AnalysisRun[];
   missedReviews: MissedReview[];
   queueColumns: QueueColumn[];
 };

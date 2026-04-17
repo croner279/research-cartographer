@@ -8,31 +8,45 @@ import { useWorkspace } from "@/components/workspace-provider";
 import type { EmergingTopic } from "@/lib/types";
 
 export function TopicCard({ topic }: { topic: EmergingTopic }) {
-  const { deleteTopic } = useWorkspace();
+  const { deleteTopic, promoteTopicToWave, setTopicReviewStatus } = useWorkspace();
 
   return (
     <Card className="border-border bg-panel shadow-card">
       <CardHeader className="space-y-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <StatusBadge kind="topic" value={topic.maturityStatus} />
-            <CardTitle className="text-xl">{topic.name}</CardTitle>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <StatusBadge kind="topic" value={topic.maturityStatus} />
+              <StatusBadge kind="review" value={topic.reviewStatus} />
+            </div>
+            <CardTitle className="text-lg leading-snug">{topic.name}</CardTitle>
+            <p className="text-sm leading-6 text-muted-foreground">{topic.oneLiner}</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" asChild>
-              <Link href={`/topics/${topic.slug}`}>이게 뭐지?</Link>
+          <div className="flex shrink-0 gap-2 self-start">
+            <Button variant="secondary" size="sm" className="px-2.5 text-xs" asChild>
+              <Link href={`/topics/${topic.slug}`}>보기</Link>
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => deleteTopic(topic.id)}>
+            <Button variant="secondary" size="sm" className="px-2.5 text-xs" onClick={() => deleteTopic(topic.id)}>
               삭제
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm leading-7 text-muted-foreground">{topic.whyItMatters}</p>
+        <p className="line-clamp-3 text-sm leading-7 text-muted-foreground">{topic.whyItMatters}</p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <MetricPill label="최근 언급" value={`${topic.recentMentions}회`} />
-          <MetricPill label="연결 문서" value={`${topic.linkedDocumentsCount}개`} />
+          <MetricPill label="반복 언급" value={`${topic.recentMentions}회`} />
+          <MetricPill label="연결 evidence" value={`${topic.evidenceIds.length}개`} />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {topic.reviewStatus !== "active" ? (
+            <Button variant="secondary" size="sm" onClick={() => setTopicReviewStatus(topic.id, "active")}>
+              draft 승인
+            </Button>
+          ) : null}
+          <Button size="sm" onClick={() => promoteTopicToWave(topic.id)}>
+            Wave로 승격
+          </Button>
         </div>
       </CardContent>
     </Card>

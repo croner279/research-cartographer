@@ -20,16 +20,16 @@ export function WorkspaceTransferPanel() {
   }
 
   return (
-    <div className="mt-4 rounded-[24px] border border-border bg-white p-5">
-      <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+    <div className="mt-3 rounded-[22px] border border-border bg-white/80 p-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
         Transfer
       </p>
-      <p className="mt-3 text-sm leading-7 text-muted-foreground">
-        로컬 워크스페이스를 JSON으로 내보내거나 다른 PC에서 가져옵니다.
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+        현재 워크스페이스를 JSON으로 내보내거나 다시 불러옵니다.
       </p>
       <div className="mt-4 grid gap-2">
         <Button variant="secondary" size="sm" className="w-full" onClick={exportWorkspace}>
-          워크스페이스 내보내기
+          내보내기
         </Button>
         <Button
           variant="secondary"
@@ -37,7 +37,7 @@ export function WorkspaceTransferPanel() {
           className="w-full"
           onClick={() => inputRef.current?.click()}
         >
-          워크스페이스 가져오기
+          불러오기
         </Button>
         <input
           ref={inputRef}

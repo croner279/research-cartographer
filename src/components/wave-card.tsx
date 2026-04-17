@@ -23,7 +23,7 @@ export function WaveCard({ wave, expanded = false }: { wave: Wave; expanded?: bo
           <p className="text-sm font-medium text-foreground">핵심 병목</p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             {wave.keyBottlenecks.slice(0, expanded ? wave.keyBottlenecks.length : 2).map((item) => (
-              <li key={item}>• {item}</li>
+              <li key={item}>- {item}</li>
             ))}
           </ul>
         </div>

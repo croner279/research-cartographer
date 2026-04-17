@@ -17,6 +17,12 @@ create table if not exists public.documents (
   published_at date,
   summary_line text,
   raw_text text,
+  topic_id uuid,
+  wave_id uuid,
+  file_name text,
+  intake_method text not null default 'paste',
+  analysis_state text not null default 'not_run',
+  last_analysis_run_id uuid,
   created_at timestamptz not null default timezone('utc'::text, now())
 );
 
@@ -43,8 +49,14 @@ create table if not exists public.emerging_topics (
   why_now text,
   why_it_matters text,
   maturity_status text not null default 'unknown',
+  review_status text not null default 'draft',
+  origin text not null default 'manual',
   recent_mentions integer not null default 0,
   linked_documents_count integer not null default 0,
+  open_questions text[] not null default '{}',
+  source_concepts text[] not null default '{}',
+  parent_wave_hint text,
+  last_analysis_run_id uuid,
   created_at timestamptz not null default timezone('utc'::text, now())
 );
 
@@ -62,11 +74,46 @@ create table if not exists public.evidence_items (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   document_id uuid references public.documents (id) on delete cascade,
+  chunk_id uuid,
+  analysis_run_id uuid,
   title text not null,
   snippet text,
   item_type text not null default 'snippet',
   why_tag text,
   note text,
+  review_status text not null default 'pending',
+  confidence integer not null default 50,
+  company_mentions text[] not null default '{}',
+  candidate_topic_names text[] not null default '{}',
+  parent_wave_hint text,
+  approved_at timestamptz,
+  created_at timestamptz not null default timezone('utc'::text, now())
+);
+
+create table if not exists public.analysis_runs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  document_id uuid not null references public.documents (id) on delete cascade,
+  status text not null default 'completed',
+  engine_version text not null default 'analysis-engine-v1',
+  chunk_count integer not null default 0,
+  evidence_candidate_count integer not null default 0,
+  topic_draft_count integer not null default 0,
+  repeated_concepts text[] not null default '{}',
+  notes text,
+  created_at timestamptz not null default timezone('utc'::text, now())
+);
+
+create table if not exists public.document_chunks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  document_id uuid not null references public.documents (id) on delete cascade,
+  analysis_run_id uuid not null references public.analysis_runs (id) on delete cascade,
+  chunk_order integer not null,
+  body text not null,
+  char_start integer not null default 0,
+  char_end integer not null default 0,
+  token_estimate integer not null default 0,
   created_at timestamptz not null default timezone('utc'::text, now())
 );
 
@@ -121,6 +168,8 @@ alter table public.waves enable row level security;
 alter table public.emerging_topics enable row level security;
 alter table public.questions enable row level security;
 alter table public.evidence_items enable row level security;
+alter table public.analysis_runs enable row level security;
+alter table public.document_chunks enable row level security;
 alter table public.companies enable row level security;
 alter table public.wave_company_links enable row level security;
 alter table public.question_evidence_links enable row level security;
@@ -134,6 +183,8 @@ create policy "waves own access" on public.waves for all using (auth.uid() = use
 create policy "topics own access" on public.emerging_topics for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "questions own access" on public.questions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "evidence own access" on public.evidence_items for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "analysis runs own access" on public.analysis_runs for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "document chunks own access" on public.document_chunks for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "companies own access" on public.companies for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "missed reviews own access" on public.missed_reviews for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "workspace snapshot own access" on public.workspace_snapshots for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

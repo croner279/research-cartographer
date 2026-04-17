@@ -14,7 +14,10 @@ export function QuestionEvidenceLinker({
 }) {
   const { dashboard, attachEvidenceToQuestion } = useWorkspace();
   const availableEvidence = useMemo(
-    () => dashboard.evidenceItems.filter((item) => !linkedEvidenceIds.includes(item.id)),
+    () =>
+      dashboard.evidenceItems.filter(
+        (item) => item.reviewStatus === "approved" && !linkedEvidenceIds.includes(item.id),
+      ),
     [dashboard.evidenceItems, linkedEvidenceIds],
   );
   const [selectedEvidenceId, setSelectedEvidenceId] = useState("");

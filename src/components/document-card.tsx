@@ -1,7 +1,10 @@
-import { Card, CardContent } from "@/components/ui/card";
+"use client";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { queueStatusLabels } from "@/lib/sample-data";
 import type { Document, DocumentStatus } from "@/lib/types";
+import { useWorkspace } from "@/components/workspace-provider";
 
 const statusOrder: DocumentStatus[] = [
   "inbox",
@@ -12,25 +15,81 @@ const statusOrder: DocumentStatus[] = [
   "archived",
 ];
 
+type DocumentCardDensity = "comfortable" | "compact";
+
 export function DocumentCard({
   document,
   onMoveStatus,
   onDelete,
+  onAnalyze,
+  density = "comfortable",
 }: {
   document: Document;
   onMoveStatus: (documentId: string, status: DocumentStatus) => void;
   onDelete: (documentId: string) => void;
+  onAnalyze: (documentId: string) => void;
+  density?: DocumentCardDensity;
 }) {
+  const { dashboard, updateDocumentLinks } = useWorkspace();
+  const linkedTopic = dashboard.topics.find((topic) => topic.id === document.topicId);
+  const linkedWave = dashboard.waves.find((wave) => wave.id === document.waveId);
+  const pendingEvidenceCount = dashboard.evidenceItems.filter(
+    (item) => item.documentId === document.id && item.reviewStatus === "pending",
+  ).length;
+  const topicDraftCount = dashboard.topics.filter(
+    (topic) =>
+      topic.lastAnalysisRunId === document.lastAnalysisRunId && topic.reviewStatus === "draft",
+  ).length;
+  const compact = density === "compact";
+
   return (
     <Card className="border-border bg-white">
-      <CardContent className="space-y-3 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-foreground">{document.title}</p>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">
-            {queueStatusLabels[document.status]}
-          </span>
+      <CardContent className={compact ? "space-y-2 p-3" : "space-y-3 p-4"}>
+        <div className="space-y-1">
+          <p className={`${compact ? "line-clamp-1 text-[13px]" : "line-clamp-2 text-sm"} font-medium text-foreground`}>
+            {document.title}
+          </p>
+          <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+            <span className="truncate">{document.source || "직접 입력"}</span>
+            <span>{document.publishedAt}</span>
+          </div>
         </div>
-        <p className="text-sm leading-6 text-muted-foreground">{document.summaryLine}</p>
+
+        <p className={`${compact ? "line-clamp-2 text-[12px] leading-5" : "line-clamp-3 text-sm leading-6"} text-muted-foreground`}>
+          {document.summaryLine}
+        </p>
+
+        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+          <span className="rounded-full border border-border px-2 py-1">
+            분석 상태: {document.analysisState === "completed" ? "완료" : "미실행"}
+          </span>
+          {pendingEvidenceCount ? (
+            <span className="rounded-full border border-border px-2 py-1">
+              검토 대기 evidence {pendingEvidenceCount}
+            </span>
+          ) : null}
+          {topicDraftCount ? (
+            <span className="rounded-full border border-border px-2 py-1">
+              topic draft {topicDraftCount}
+            </span>
+          ) : null}
+        </div>
+
+        {linkedWave || linkedTopic ? (
+          <div className="flex flex-wrap gap-2">
+            {linkedWave ? (
+              <span className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
+                Wave · {linkedWave.title}
+              </span>
+            ) : null}
+            {linkedTopic ? (
+              <span className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
+                Topic · {linkedTopic.name}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
         <select
           value={document.status}
           onChange={(event) => onMoveStatus(document.id, event.target.value as DocumentStatus)}
@@ -42,9 +101,44 @@ export function DocumentCard({
             </option>
           ))}
         </select>
-        <Button variant="secondary" size="sm" className="w-full" onClick={() => onDelete(document.id)}>
-          문서 삭제
-        </Button>
+
+        <div className="grid gap-2">
+          <select
+            value={document.waveId}
+            onChange={(event) => updateDocumentLinks(document.id, { waveId: event.target.value })}
+            className="h-9 w-full rounded-xl border border-border bg-white px-3 text-xs outline-none"
+          >
+            <option value="">관련 Wave 선택</option>
+            {dashboard.waves.map((wave) => (
+              <option key={wave.id} value={wave.id}>
+                {wave.title}
+              </option>
+            ))}
+          </select>
+          <select
+            value={document.topicId}
+            onChange={(event) => updateDocumentLinks(document.id, { topicId: event.target.value })}
+            className="h-9 w-full rounded-xl border border-border bg-white px-3 text-xs outline-none"
+          >
+            <option value="">관련 Topic 선택</option>
+            {dashboard.topics.map((topic) => (
+              <option key={topic.id} value={topic.id}>
+                {topic.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className={`grid gap-2 ${compact ? "grid-cols-1" : "grid-cols-2"}`}>
+          <Button variant="secondary" size="sm" onClick={() => onAnalyze(document.id)}>
+            분석 실행
+          </Button>
+          {!compact ? (
+            <Button variant="secondary" size="sm" onClick={() => onDelete(document.id)}>
+              문서 삭제
+            </Button>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );

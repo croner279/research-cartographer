@@ -14,7 +14,10 @@ export function TopicEvidenceLinker({
 }) {
   const { dashboard, attachEvidenceToTopic } = useWorkspace();
   const availableEvidence = useMemo(
-    () => dashboard.evidenceItems.filter((item) => !linkedEvidenceIds.includes(item.id)),
+    () =>
+      dashboard.evidenceItems.filter(
+        (item) => item.reviewStatus === "approved" && !linkedEvidenceIds.includes(item.id),
+      ),
     [dashboard.evidenceItems, linkedEvidenceIds],
   );
   const [selectedEvidenceId, setSelectedEvidenceId] = useState("");
@@ -27,7 +30,7 @@ export function TopicEvidenceLinker({
 
   return (
     <div className="rounded-2xl border border-border bg-white p-4">
-      <p className="text-sm font-medium text-foreground">evidence 연결</p>
+      <p className="text-sm font-medium text-foreground">승인된 evidence 연결</p>
       <div className="mt-3 flex gap-3">
         <select
           value={selectedEvidenceId}
