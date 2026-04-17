@@ -47,6 +47,7 @@ export const topicReviewLabels: Record<TopicReviewStatus, string> = {
 export const sampleDashboard: DashboardData = {
   companies: [],
   documents: [],
+  documentPages: [],
   documentChunks: [],
   topics: [],
   waves: [],

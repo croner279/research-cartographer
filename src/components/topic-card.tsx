@@ -4,6 +4,7 @@ import { MetricPill } from "@/components/metric-pill";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatPageNumbers } from "@/lib/page-utils";
 import { useWorkspace } from "@/components/workspace-provider";
 import type { EmergingTopic } from "@/lib/types";
 
@@ -20,7 +21,7 @@ export function TopicCard({ topic }: { topic: EmergingTopic }) {
               <StatusBadge kind="review" value={topic.reviewStatus} />
             </div>
             <CardTitle className="text-lg leading-snug">{topic.name}</CardTitle>
-            <p className="text-sm leading-6 text-muted-foreground">{topic.oneLiner}</p>
+            <p className="text-sm leading-6 text-foreground">{topic.oneLiner}</p>
           </div>
           <div className="flex shrink-0 gap-2 self-start">
             <Button variant="secondary" size="sm" className="px-2.5 text-xs" asChild>
@@ -33,11 +34,17 @@ export function TopicCard({ topic }: { topic: EmergingTopic }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="line-clamp-3 text-sm leading-7 text-muted-foreground">{topic.whyItMatters}</p>
+        <div className="rounded-2xl border border-border bg-white px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Why It Matters</p>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">{topic.whyItMatters}</p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <MetricPill label="반복 언급" value={`${topic.recentMentions}회`} />
           <MetricPill label="연결 evidence" value={`${topic.evidenceIds.length}개`} />
         </div>
+        {topic.sourcePages.length ? (
+          <p className="text-xs text-muted-foreground">source pages · {formatPageNumbers(topic.sourcePages)}</p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           {topic.reviewStatus !== "active" ? (
             <Button variant="secondary" size="sm" onClick={() => setTopicReviewStatus(topic.id, "active")}>

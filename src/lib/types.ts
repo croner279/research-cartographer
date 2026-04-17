@@ -9,8 +9,9 @@ export type DocumentStatus =
   | "extracted"
   | "linked"
   | "archived";
-export type DocumentIntakeMethod = "paste" | "file_stub";
+export type DocumentIntakeMethod = "paste" | "pdf";
 export type DocumentAnalysisState = "not_run" | "running" | "completed" | "failed";
+export type DocumentExtractionState = "not_started" | "extracting" | "completed" | "failed";
 export type EvidenceWhyTag =
   | "bottleneck"
   | "new demand"
@@ -20,12 +21,22 @@ export type EvidenceWhyTag =
   | "structure hint";
 export type EvidenceReviewStatus = "pending" | "approved" | "rejected";
 export type AnalysisRunStatus = "running" | "completed" | "failed";
+export type PageAssetKind = "chart" | "image" | "table";
 
 export type Company = {
   id: string;
   name: string;
   ticker: string;
   roleDescription: string;
+};
+
+export type PageAssetPlaceholder = {
+  id: string;
+  documentId: string;
+  pageNumber: number;
+  kind: PageAssetKind;
+  label: string;
+  status: "pending_extraction";
 };
 
 export type Document = {
@@ -41,9 +52,22 @@ export type Document = {
   waveId: string;
   fileName?: string;
   intakeMethod: DocumentIntakeMethod;
+  extractionState: DocumentExtractionState;
+  extractionError?: string;
   analysisState: DocumentAnalysisState;
   lastAnalysisRunId: string;
   createdAt: string;
+  pageCount: number;
+};
+
+export type DocumentPage = {
+  id: string;
+  documentId: string;
+  pageNumber: number;
+  text: string;
+  charStart: number;
+  charEnd: number;
+  assetPlaceholders: PageAssetPlaceholder[];
 };
 
 export type DocumentChunk = {
@@ -55,6 +79,9 @@ export type DocumentChunk = {
   charStart: number;
   charEnd: number;
   tokenEstimate: number;
+  pageStart: number;
+  pageEnd: number;
+  sourcePages: number[];
 };
 
 export type EmergingTopic = {
@@ -76,6 +103,7 @@ export type EmergingTopic = {
   openQuestions: string[];
   sourceConcepts: string[];
   parentWaveHint: string;
+  sourcePages: number[];
   lastAnalysisRunId: string;
   createdAt: string;
 };
@@ -124,6 +152,7 @@ export type EvidenceItem = {
   companyMentions: string[];
   candidateTopicNames: string[];
   parentWaveHint: string;
+  sourcePages: number[];
   createdAt: string;
   approvedAt?: string;
 };
@@ -158,6 +187,7 @@ export type QueueColumn = {
 export type DashboardData = {
   companies: Company[];
   documents: Document[];
+  documentPages: DocumentPage[];
   documentChunks: DocumentChunk[];
   topics: EmergingTopic[];
   waves: Wave[];

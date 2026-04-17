@@ -1,6 +1,7 @@
 import { TagBadge } from "@/components/tag-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatPageNumbers } from "@/lib/page-utils";
 import { evidenceReviewLabels } from "@/lib/sample-data";
 import type { EvidenceItem } from "@/lib/types";
 import { useWorkspace } from "@/components/workspace-provider";
@@ -16,10 +17,10 @@ export function EvidenceCard({
 
   return (
     <Card className="border-border bg-white">
-      <CardContent className="space-y-3 p-5">
+      <CardContent className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">{item.title}</p>
+            <p className="text-base font-medium text-foreground">{item.title}</p>
             <div className="flex flex-wrap gap-2">
               <TagBadge value={item.whyTag} />
               <span className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
@@ -28,6 +29,11 @@ export function EvidenceCard({
               <span className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
                 신뢰도 {item.confidence}
               </span>
+              {item.sourcePages.length ? (
+                <span className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
+                  {formatPageNumbers(item.sourcePages)}
+                </span>
+              ) : null}
             </div>
           </div>
           <Button variant="secondary" size="sm" onClick={() => deleteEvidence(item.id)}>
@@ -35,7 +41,17 @@ export function EvidenceCard({
           </Button>
         </div>
 
-        <p className="text-sm leading-7 text-muted-foreground">{item.snippet}</p>
+        {item.note ? (
+          <div className="rounded-2xl border border-border bg-panel px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Why This Matters</p>
+            <p className="mt-2 text-sm leading-6 text-foreground">{item.note}</p>
+          </div>
+        ) : null}
+
+        <div className="rounded-2xl border border-dashed border-border bg-white px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Source Quote</p>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">&quot;{item.snippet}&quot;</p>
+        </div>
 
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           {item.companyMentions.map((company) => (
@@ -54,8 +70,6 @@ export function EvidenceCard({
             </span>
           ) : null}
         </div>
-
-        {item.note ? <p className="text-xs text-muted-foreground">메모: {item.note}</p> : null}
 
         {showReviewActions ? (
           <div className="flex flex-wrap gap-2">

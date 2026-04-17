@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useWorkspace } from "@/components/workspace-provider";
 
 export function DocumentIntakeForm() {
-  const { addDocument, dashboard } = useWorkspace();
+  const { addDocument, ingestPdfDocument, dashboard } = useWorkspace();
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
   const [documentType, setDocumentType] = useState("report");
@@ -17,9 +17,35 @@ export function DocumentIntakeForm() {
   const [publishedAt, setPublishedAt] = useState("");
   const [topicId, setTopicId] = useState("");
   const [waveId, setWaveId] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    if (pdfFile) {
+      setUploading(true);
+      try {
+        await ingestPdfDocument({
+          file: pdfFile,
+          title,
+          source,
+          summaryLine: summaryLine.trim() || "PDF 업로드 후 페이지별 텍스트를 추출한 문서",
+          publishedAt,
+          topicId,
+          waveId,
+        });
+        setTitle("");
+        setSource("");
+        setSummaryLine("");
+        setPublishedAt("");
+        setTopicId("");
+        setWaveId("");
+        setPdfFile(null);
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
     if (!title.trim() || !summaryLine.trim() || !rawText.trim()) {
       return;
     }
@@ -33,8 +59,6 @@ export function DocumentIntakeForm() {
       publishedAt,
       topicId,
       waveId,
-      fileName,
-      intakeMethod: fileName ? "file_stub" : "paste",
     });
 
     setTitle("");
@@ -45,7 +69,6 @@ export function DocumentIntakeForm() {
     setPublishedAt("");
     setTopicId("");
     setWaveId("");
-    setFileName("");
   }
 
   return (
@@ -53,8 +76,8 @@ export function DocumentIntakeForm() {
       <div className="mb-4">
         <p className="text-sm font-medium text-foreground">새 문서 추가</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          v1은 붙여넣은 텍스트를 먼저 분석합니다. 파일 업로드는 메타데이터 자리만 준비해 두고, 실제
-          파싱은 다음 단계로 분리했습니다.
+          텍스트를 직접 붙여 넣거나 PDF를 업로드할 수 있습니다. PDF는 페이지 단위로 추출되어 이후 evidence와
+          topic draft에서 원문 페이지를 계속 따라갈 수 있습니다.
         </p>
       </div>
 
@@ -102,19 +125,19 @@ export function DocumentIntakeForm() {
         </select>
       </div>
 
-      <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_280px]">
+      <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_320px]">
         <Input
           value={summaryLine}
           onChange={(event) => setSummaryLine(event.target.value)}
           placeholder="한 줄 요약"
         />
         <label className="flex h-11 items-center rounded-2xl border border-dashed border-border bg-white px-4 text-sm text-muted-foreground">
-          <span className="truncate">{fileName || "파일 업로드 자리만 준비됨"}</span>
+          <span className="truncate">{pdfFile?.name || "PDF 업로드"}</span>
           <input
             type="file"
-            accept=".pdf,.txt,.md"
+            accept=".pdf"
             className="sr-only"
-            onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
+            onChange={(event) => setPdfFile(event.target.files?.[0] ?? null)}
           />
         </label>
       </div>
@@ -123,13 +146,16 @@ export function DocumentIntakeForm() {
         <Textarea
           value={rawText}
           onChange={(event) => setRawText(event.target.value)}
-          placeholder="분석할 본문 텍스트를 붙여 넣으세요"
+          placeholder="PDF가 없으면 분석할 본문 텍스트를 붙여 넣으세요"
           className="min-h-48"
+          disabled={Boolean(pdfFile)}
         />
       </div>
 
       <div className="mt-4 flex justify-end">
-        <Button onClick={handleSubmit}>큐에 추가</Button>
+        <Button onClick={() => void handleSubmit()} disabled={uploading}>
+          {uploading ? "PDF 추출 중..." : pdfFile ? "PDF 업로드" : "큐에 추가"}
+        </Button>
       </div>
     </div>
   );

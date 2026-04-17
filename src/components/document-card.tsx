@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatPageNumbers } from "@/lib/page-utils";
 import { queueStatusLabels } from "@/lib/sample-data";
 import type { Document, DocumentStatus } from "@/lib/types";
 import { useWorkspace } from "@/components/workspace-provider";
@@ -16,6 +17,13 @@ const statusOrder: DocumentStatus[] = [
 ];
 
 type DocumentCardDensity = "comfortable" | "compact";
+
+function getExtractionLabel(document: Document) {
+  if (document.extractionState === "extracting") return "PDF 추출 중";
+  if (document.extractionState === "failed") return "추출 실패";
+  if (document.extractionState === "completed") return `추출 완료 · ${document.pageCount}p`;
+  return document.intakeMethod === "pdf" ? "추출 대기" : "텍스트 입력";
+}
 
 export function DocumentCard({
   document,
@@ -33,14 +41,16 @@ export function DocumentCard({
   const { dashboard, updateDocumentLinks } = useWorkspace();
   const linkedTopic = dashboard.topics.find((topic) => topic.id === document.topicId);
   const linkedWave = dashboard.waves.find((wave) => wave.id === document.waveId);
-  const pendingEvidenceCount = dashboard.evidenceItems.filter(
+  const pendingEvidence = dashboard.evidenceItems.filter(
     (item) => item.documentId === document.id && item.reviewStatus === "pending",
-  ).length;
+  );
   const topicDraftCount = dashboard.topics.filter(
     (topic) =>
       topic.lastAnalysisRunId === document.lastAnalysisRunId && topic.reviewStatus === "draft",
   ).length;
   const compact = density === "compact";
+  const pendingPages = [...new Set(pendingEvidence.flatMap((item) => item.sourcePages))];
+  const canAnalyze = document.extractionState === "completed" && document.rawText.trim().length > 0;
 
   return (
     <Card className="border-border bg-white">
@@ -60,20 +70,28 @@ export function DocumentCard({
         </p>
 
         <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+          <span className="rounded-full border border-border px-2 py-1">{getExtractionLabel(document)}</span>
           <span className="rounded-full border border-border px-2 py-1">
             분석 상태: {document.analysisState === "completed" ? "완료" : "미실행"}
           </span>
-          {pendingEvidenceCount ? (
+          {pendingEvidence.length ? (
             <span className="rounded-full border border-border px-2 py-1">
-              검토 대기 evidence {pendingEvidenceCount}
+              검토 대기 evidence {pendingEvidence.length}
+            </span>
+          ) : null}
+          {pendingPages.length ? (
+            <span className="rounded-full border border-border px-2 py-1">
+              {formatPageNumbers(pendingPages)}
             </span>
           ) : null}
           {topicDraftCount ? (
-            <span className="rounded-full border border-border px-2 py-1">
-              topic draft {topicDraftCount}
-            </span>
+            <span className="rounded-full border border-border px-2 py-1">topic draft {topicDraftCount}</span>
           ) : null}
         </div>
+
+        {document.extractionError ? (
+          <p className="text-xs text-rose-600">{document.extractionError}</p>
+        ) : null}
 
         {linkedWave || linkedTopic ? (
           <div className="flex flex-wrap gap-2">
@@ -130,7 +148,7 @@ export function DocumentCard({
         </div>
 
         <div className={`grid gap-2 ${compact ? "grid-cols-1" : "grid-cols-2"}`}>
-          <Button variant="secondary" size="sm" onClick={() => onAnalyze(document.id)}>
+          <Button variant="secondary" size="sm" onClick={() => onAnalyze(document.id)} disabled={!canAnalyze}>
             분석 실행
           </Button>
           {!compact ? (

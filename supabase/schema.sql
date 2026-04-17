@@ -21,8 +21,11 @@ create table if not exists public.documents (
   wave_id uuid,
   file_name text,
   intake_method text not null default 'paste',
+  extraction_state text not null default 'not_started',
+  extraction_error text,
   analysis_state text not null default 'not_run',
   last_analysis_run_id uuid,
+  page_count integer not null default 0,
   created_at timestamptz not null default timezone('utc'::text, now())
 );
 
@@ -56,6 +59,7 @@ create table if not exists public.emerging_topics (
   open_questions text[] not null default '{}',
   source_concepts text[] not null default '{}',
   parent_wave_hint text,
+  source_pages integer[] not null default '{}',
   last_analysis_run_id uuid,
   created_at timestamptz not null default timezone('utc'::text, now())
 );
@@ -86,6 +90,7 @@ create table if not exists public.evidence_items (
   company_mentions text[] not null default '{}',
   candidate_topic_names text[] not null default '{}',
   parent_wave_hint text,
+  source_pages integer[] not null default '{}',
   approved_at timestamptz,
   created_at timestamptz not null default timezone('utc'::text, now())
 );
@@ -104,6 +109,18 @@ create table if not exists public.analysis_runs (
   created_at timestamptz not null default timezone('utc'::text, now())
 );
 
+create table if not exists public.document_pages (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  document_id uuid not null references public.documents (id) on delete cascade,
+  page_number integer not null,
+  body text not null,
+  char_start integer not null default 0,
+  char_end integer not null default 0,
+  asset_placeholders jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default timezone('utc'::text, now())
+);
+
 create table if not exists public.document_chunks (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
@@ -114,6 +131,9 @@ create table if not exists public.document_chunks (
   char_start integer not null default 0,
   char_end integer not null default 0,
   token_estimate integer not null default 0,
+  page_start integer not null default 1,
+  page_end integer not null default 1,
+  source_pages integer[] not null default '{}',
   created_at timestamptz not null default timezone('utc'::text, now())
 );
 
@@ -169,6 +189,7 @@ alter table public.emerging_topics enable row level security;
 alter table public.questions enable row level security;
 alter table public.evidence_items enable row level security;
 alter table public.analysis_runs enable row level security;
+alter table public.document_pages enable row level security;
 alter table public.document_chunks enable row level security;
 alter table public.companies enable row level security;
 alter table public.wave_company_links enable row level security;
@@ -184,6 +205,7 @@ create policy "topics own access" on public.emerging_topics for all using (auth.
 create policy "questions own access" on public.questions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "evidence own access" on public.evidence_items for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "analysis runs own access" on public.analysis_runs for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "document pages own access" on public.document_pages for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "document chunks own access" on public.document_chunks for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "companies own access" on public.companies for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "missed reviews own access" on public.missed_reviews for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

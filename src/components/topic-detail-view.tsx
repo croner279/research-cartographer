@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { TopicEditForm } from "@/components/topic-edit-form";
 import { TopicEvidenceLinker } from "@/components/topic-evidence-linker";
 import { Button } from "@/components/ui/button";
+import { formatPageNumbers } from "@/lib/page-utils";
 import { useWorkspace } from "@/components/workspace-provider";
 import type { TopicMaturity, TopicReviewStatus } from "@/lib/types";
 
@@ -37,9 +38,12 @@ export function TopicDetailView({ slug }: { slug: string }) {
     topic.questionIds.includes(question.id),
   );
   const relatedDocuments = dashboard.documents.filter(
-    (document) => document.topicId === topic.id || topic.evidenceIds.some((evidenceId) =>
-      dashboard.evidenceItems.find((item) => item.id === evidenceId)?.documentId === document.id,
-    ),
+    (document) =>
+      document.topicId === topic.id ||
+      topic.evidenceIds.some(
+        (evidenceId) =>
+          dashboard.evidenceItems.find((item) => item.id === evidenceId)?.documentId === document.id,
+      ),
   );
 
   return (
@@ -47,7 +51,7 @@ export function TopicDetailView({ slug }: { slug: string }) {
       <SectionHeader
         eyebrow="Topic Draft"
         title={topic.name}
-        description="반복된 개념이 왜 지금 잡히는지, 어떤 evidence가 붙는지, 어떤 Wave로 이어질 수 있는지 검토합니다."
+        description="반복 개념이 왜 중요한지, 어떤 evidence와 페이지에서 잡혔는지, 어떤 Wave로 이어질 수 있는지 검토합니다."
         actions={
           <div className="flex items-center gap-3">
             <select
@@ -109,7 +113,10 @@ export function TopicDetailView({ slug }: { slug: string }) {
             <div className="space-y-2">
               {topic.openQuestions.length ? (
                 topic.openQuestions.map((question) => (
-                  <div key={question} className="rounded-2xl border border-border bg-white px-4 py-3 text-sm text-muted-foreground">
+                  <div
+                    key={question}
+                    className="rounded-2xl border border-border bg-white px-4 py-3 text-sm text-muted-foreground"
+                  >
                     {question}
                   </div>
                 ))
@@ -118,6 +125,12 @@ export function TopicDetailView({ slug }: { slug: string }) {
               )}
             </div>
           </SectionCard>
+
+          {topic.sourcePages.length ? (
+            <SectionCard title="Source Pages">
+              <p className="text-sm text-muted-foreground">{formatPageNumbers(topic.sourcePages)}</p>
+            </SectionCard>
+          ) : null}
 
           <TopicEditForm topic={topic} />
 
@@ -187,9 +200,7 @@ export function TopicDetailView({ slug }: { slug: string }) {
                 relatedQuestions.map((question) => (
                   <div key={question.id} className="rounded-2xl border border-border bg-white p-4">
                     <p className="text-sm font-medium text-foreground">{question.title}</p>
-                    <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                      {question.description}
-                    </p>
+                    <p className="mt-2 text-sm leading-7 text-muted-foreground">{question.description}</p>
                   </div>
                 ))
               ) : (

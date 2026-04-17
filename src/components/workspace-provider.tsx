@@ -10,9 +10,12 @@ import {
 } from "react";
 
 import { runDocumentAnalysis } from "@/lib/analysis/engine";
+import { extractPdfDocument } from "@/lib/pdf/extract";
 import { buildQueueColumns, sampleDashboard } from "@/lib/sample-data";
 import type {
   DashboardData,
+  Document,
+  DocumentPage,
   DocumentStatus,
   EvidenceReviewStatus,
   EvidenceWhyTag,
@@ -93,9 +96,16 @@ type WorkspaceContextValue = {
     publishedAt?: string;
     topicId?: string;
     waveId?: string;
-    fileName?: string;
-    intakeMethod?: "paste" | "file_stub";
   }) => void;
+  ingestPdfDocument: (input: {
+    file: File;
+    title: string;
+    source: string;
+    summaryLine: string;
+    publishedAt?: string;
+    topicId?: string;
+    waveId?: string;
+  }) => Promise<void>;
   addEvidenceItem: (input: {
     documentId: string;
     title: string;
@@ -122,6 +132,21 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9가-힣\s-]/g, "")
     .replace(/\s+/g, "-");
+}
+
+function createDocumentPageFromText(documentId: string, rawText: string): DocumentPage[] {
+  if (!rawText.trim()) return [];
+  return [
+    {
+      id: `page-${crypto.randomUUID()}`,
+      documentId,
+      pageNumber: 1,
+      text: rawText.trim(),
+      charStart: 0,
+      charEnd: rawText.trim().length,
+      assetPlaceholders: [],
+    },
+  ];
 }
 
 const documentStatusOrder: DocumentStatus[] = [
@@ -165,9 +190,12 @@ function normalizeDashboard(data: DashboardData): DashboardData {
     waveId: document.waveId ?? "",
     fileName: document.fileName ?? "",
     intakeMethod: document.intakeMethod ?? "paste",
+    extractionState: document.extractionState ?? "completed",
+    extractionError: document.extractionError ?? "",
     analysisState: document.analysisState ?? "not_run",
     lastAnalysisRunId: document.lastAnalysisRunId ?? "",
     createdAt: document.createdAt ?? document.publishedAt ?? new Date().toISOString(),
+    pageCount: document.pageCount ?? 0,
   }));
 
   const normalizedTopics = data.topics.map((topic) => ({
@@ -178,6 +206,7 @@ function normalizeDashboard(data: DashboardData): DashboardData {
     openQuestions: topic.openQuestions ?? [],
     sourceConcepts: topic.sourceConcepts ?? [],
     parentWaveHint: topic.parentWaveHint ?? "",
+    sourcePages: topic.sourcePages ?? [],
     lastAnalysisRunId: topic.lastAnalysisRunId ?? "",
     createdAt: topic.createdAt ?? new Date().toISOString(),
   }));
@@ -191,12 +220,14 @@ function normalizeDashboard(data: DashboardData): DashboardData {
     companyMentions: item.companyMentions ?? [],
     candidateTopicNames: item.candidateTopicNames ?? [],
     parentWaveHint: item.parentWaveHint ?? "",
+    sourcePages: item.sourcePages ?? [],
     createdAt: item.createdAt ?? new Date().toISOString(),
   }));
 
   return {
     companies: data.companies ?? [],
     documents: normalizedDocuments,
+    documentPages: data.documentPages ?? [],
     documentChunks: data.documentChunks ?? [],
     topics: normalizedTopics,
     waves: data.waves ?? [],
@@ -295,6 +326,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           return normalizeDashboard({
             ...current,
             documents: current.documents.filter((document) => document.id !== documentId),
+            documentPages: current.documentPages.filter((page) => page.documentId !== documentId),
             documentChunks: current.documentChunks.filter((chunk) => chunk.documentId !== documentId),
             analysisRuns: current.analysisRuns.filter((run) => run.documentId !== documentId),
             evidenceItems: current.evidenceItems.filter((item) => item.documentId !== documentId),
@@ -425,6 +457,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                 openQuestions: input.openQuestions ?? [],
                 sourceConcepts: [input.name],
                 parentWaveHint: "",
+                sourcePages: [],
                 lastAnalysisRunId: "",
                 createdAt: new Date().toISOString(),
               },
@@ -455,8 +488,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         );
       },
       attachEvidenceToTopic(topicId, evidenceId) {
-        setDashboard((current) =>
-          normalizeDashboard({
+        setDashboard((current) => {
+          const evidence = current.evidenceItems.find((item) => item.id === evidenceId);
+          return normalizeDashboard({
             ...current,
             topics: current.topics.map((topic) =>
               topic.id === topicId && !topic.evidenceIds.includes(evidenceId)
@@ -464,11 +498,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                     ...topic,
                     evidenceIds: [evidenceId, ...topic.evidenceIds],
                     linkedDocumentsCount: topic.linkedDocumentsCount + 1,
+                    sourcePages: [
+                      ...new Set([...(topic.sourcePages ?? []), ...(evidence?.sourcePages ?? [])]),
+                    ].sort((a, b) => a - b),
                   }
                 : topic,
             ),
-          }),
-        );
+          });
+        });
       },
       attachEvidenceToQuestion(questionId, evidenceId, stance) {
         setDashboard((current) => {
@@ -625,11 +662,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
               const nextWaveId = derivedWaveId ?? document.waveId;
 
               return {
-                ...document,
-                topicId: nextTopicId,
-                waveId: nextWaveId,
-                status: ensureLinkedStatus(document.status, Boolean(nextTopicId || nextWaveId)),
-              };
+                    ...document,
+                    topicId: nextTopicId,
+                    waveId: nextWaveId,
+                    status: ensureLinkedStatus(document.status, Boolean(nextTopicId || nextWaveId)),
+                  };
             }),
           });
         });
@@ -643,12 +680,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
           const topicId = input.topicId || "";
           const waveId = derivedWaveId || "";
+          const documentId = `doc-${crypto.randomUUID()}`;
+          const pages = createDocumentPageFromText(documentId, input.rawText);
 
           return normalizeDashboard({
             ...current,
+            documentPages: [...pages, ...current.documentPages],
             documents: [
               {
-                id: `doc-${crypto.randomUUID()}`,
+                id: documentId,
                 title: input.title,
                 source: input.source || "직접 입력",
                 documentType: input.documentType || "note",
@@ -658,16 +698,98 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                 rawText: input.rawText,
                 topicId,
                 waveId,
-                fileName: input.fileName || "",
-                intakeMethod: input.intakeMethod || "paste",
+                fileName: "",
+                intakeMethod: "paste",
+                extractionState: "completed",
+                extractionError: "",
                 analysisState: "not_run",
                 lastAnalysisRunId: "",
                 createdAt: new Date().toISOString(),
+                pageCount: pages.length,
               },
               ...current.documents,
             ],
           });
         });
+      },
+      async ingestPdfDocument(input) {
+        const documentId = `doc-${crypto.randomUUID()}`;
+        const topicId = input.topicId || "";
+        const derivedWaveId =
+          !input.waveId && topicId
+            ? dashboard.topics.find((topic) => topic.id === topicId)?.parentWaveId ?? ""
+            : input.waveId || "";
+
+        const placeholder: Document = {
+          id: documentId,
+          title: input.title.trim() || input.file.name.replace(/\.pdf$/i, ""),
+          source: input.source || "PDF upload",
+          documentType: "report",
+          status: ensureLinkedStatus("inbox", Boolean(topicId || derivedWaveId)),
+          publishedAt: input.publishedAt || new Date().toISOString().slice(0, 10),
+          summaryLine: input.summaryLine,
+          rawText: "",
+          topicId,
+          waveId: derivedWaveId,
+          fileName: input.file.name,
+          intakeMethod: "pdf",
+          extractionState: "extracting",
+          extractionError: "",
+          analysisState: "not_run",
+          lastAnalysisRunId: "",
+          createdAt: new Date().toISOString(),
+          pageCount: 0,
+        };
+
+        setDashboard((current) =>
+          normalizeDashboard({
+            ...current,
+            documents: [placeholder, ...current.documents],
+          }),
+        );
+
+        try {
+          const extracted = await extractPdfDocument({
+            documentId,
+            file: input.file,
+          });
+
+          setDashboard((current) =>
+            normalizeDashboard({
+              ...current,
+              documentPages: [
+                ...extracted.pages,
+                ...current.documentPages.filter((page) => page.documentId !== documentId),
+              ],
+              documents: current.documents.map((document) =>
+                document.id === documentId
+                  ? {
+                      ...document,
+                      rawText: extracted.rawText,
+                      extractionState: "completed",
+                      extractionError: "",
+                      pageCount: extracted.pageCount,
+                    }
+                  : document,
+              ),
+            }),
+          );
+        } catch (error) {
+          setDashboard((current) =>
+            normalizeDashboard({
+              ...current,
+              documents: current.documents.map((document) =>
+                document.id === documentId
+                  ? {
+                      ...document,
+                      extractionState: "failed",
+                      extractionError: error instanceof Error ? error.message : "PDF extraction failed",
+                    }
+                  : document,
+              ),
+            }),
+          );
+        }
       },
       addEvidenceItem(input) {
         setDashboard((current) =>
@@ -694,6 +816,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
                 companyMentions: [],
                 candidateTopicNames: [],
                 parentWaveHint: "",
+                sourcePages: [],
                 createdAt: new Date().toISOString(),
                 approvedAt: new Date().toISOString(),
               },
@@ -712,6 +835,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           const previousRunId = document.lastAnalysisRunId;
           const output = runDocumentAnalysis({
             document,
+            documentPages: current.documentPages.filter((page) => page.documentId === documentId),
             existingCompanies: current.companies,
             existingTopics: current.topics,
           });

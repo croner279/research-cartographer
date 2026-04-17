@@ -8,6 +8,7 @@ import { SectionHeader } from "@/components/section-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { formatPageNumbers } from "@/lib/page-utils";
 import { useWorkspace } from "@/components/workspace-provider";
 import type { EvidenceReviewStatus, EvidenceWhyTag } from "@/lib/types";
 
@@ -151,7 +152,9 @@ export function EvidenceWorkspace() {
                     {relatedChunks.length ? (
                       relatedChunks.map((chunk) => (
                         <div key={chunk.id} className="rounded-2xl border border-border bg-panel px-4 py-3">
-                          <p className="text-xs text-muted-foreground">chunk {chunk.order + 1}</p>
+                          <p className="text-xs text-muted-foreground">
+                            chunk {chunk.order + 1} · {formatPageNumbers(chunk.sourcePages)}
+                          </p>
                           <p className="mt-2 text-sm leading-6 text-muted-foreground">{chunk.text}</p>
                         </div>
                       ))

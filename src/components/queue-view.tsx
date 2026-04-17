@@ -23,6 +23,7 @@ export function QueueView() {
   const archivedCount = dashboard.documents.filter((document) => document.status === "archived").length;
   const analyzableCount = activeDocuments.filter((document) => document.rawText.trim()).length;
   const pendingEvidenceCount = dashboard.evidenceItems.filter((item) => item.reviewStatus === "pending").length;
+  const extractingCount = activeDocuments.filter((document) => document.extractionState === "extracting").length;
 
   const filteredDocuments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -62,10 +63,14 @@ export function QueueView() {
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-4">
         <div className="rounded-[24px] border border-border bg-white px-5 py-4">
           <p className="text-sm font-medium text-foreground">분석 가능한 문서</p>
           <p className="mt-1 text-2xl font-semibold text-foreground">{analyzableCount}</p>
+        </div>
+        <div className="rounded-[24px] border border-border bg-white px-5 py-4">
+          <p className="text-sm font-medium text-foreground">PDF 추출 중</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{extractingCount}</p>
         </div>
         <div className="rounded-[24px] border border-border bg-white px-5 py-4">
           <p className="text-sm font-medium text-foreground">검토 대기 evidence</p>
